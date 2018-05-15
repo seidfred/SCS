@@ -8,8 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.fasterxml.jackson.databind.type.MapType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Splitter;
 
 import de.seidfred.accountservice.entity.AccountResponseBody;
@@ -28,7 +31,7 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 	public void serialize(AccountResponseBody accountResponseBody,
 			JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
 			throws IOException {
-		Map<String, List<String>> nodeMap = new HashMap<String, List<String>>();
+		MyTreeNode<Object> tree = null;
 
 		jsonGenerator.writeStartObject();
 
@@ -40,17 +43,9 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 				List<String> splittetPath = Splitter.on(".").splitToList(
 						jsonPath.path());
 
-				Map<String, List<String>> fieldNodeMap = buildNodeMap(
-						jsonPath.path(), splittetPath);
+				Object fieldValue = field.get(field.getType());
+				tree = buildNodeMap(tree, splittetPath, fieldValue);
 
-				for (String key : fieldNodeMap.keySet()) {
-					if (nodeMap.containsKey(key)) {
-						List<String> list = nodeMap.get(key);
-						list.addAll(fieldNodeMap.get(key));
-						nodeMap.put(key, list);
-					} else {
-						nodeMap.put(key, fieldNodeMap.get(key));
-					}
 				}
 			}
 		}
@@ -80,22 +75,19 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		}
 	}
 
-	private Map<String, List<String>> buildNodeMap(String jsonPath,
-			List<String> splittetPath) {
-		Map<String, List<String>> pathMap = new HashMap<String, List<String>>();
-		String lastEntry = splittetPath.get(splittetPath.size() - 1);
-		String path = jsonPath.replace("." + lastEntry, "");
-
-		if (pathMap.containsKey(path)) {
-			List<String> nodeList = pathMap.get(path);
-			nodeList.add(lastEntry);
-		} else {
-			List<String> nodeList = new ArrayList<String>();
-			nodeList.add(lastEntry);
-			pathMap.put(path, nodeList);
+	private MyTreeNode<Object> buildNodeMap(MyTreeNode<Object> tree,
+			List<String> splittetPath, Object fieldValue) {
+			
+		for (String pathStep : splittetPath) {
+			if (tree == null) {
+				tree = new MyTreeNode<Object>(pathStep);
+			} else
+			{
+				tree.addChild(pathStep);
+			}
 		}
 
-		return pathMap;
+		return tree;
 	}
 
 }
