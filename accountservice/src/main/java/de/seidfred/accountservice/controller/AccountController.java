@@ -18,8 +18,11 @@ public class AccountController {
 
 		System.out.println("Hello World!");
 
-		return new ResponseEntity<AccountResponseBody>(
-				new AccountResponseBody(), HttpStatus.OK);
-	}
+		AccountResponseBody accountResponseBody = new AccountResponseBody();
+		accountResponseBody.setAccountIban(accountRequestBody.getAccountIban());
+		accountResponseBody.setRequestId(accountRequestBody.getRequestId());
 
+		return new ResponseEntity<AccountResponseBody>(accountResponseBody,
+				HttpStatus.OK);
+	}
 }

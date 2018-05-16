@@ -28,7 +28,7 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 	public void serialize(AccountResponseBody accountResponseBody,
 			JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
 			throws IOException {
-		Map<String, List<String>> nodeMap = new HashMap<String, List<String>>();
+		Map<String, List<Map<String, Object>>> nodeMap = new HashMap<String, List<Map<String, Object>>>();
 
 		jsonGenerator.writeStartObject();
 
@@ -37,17 +37,23 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 			if (field.isAnnotationPresent(JsonPath.class)) {
 				JsonPath jsonPath = field.getAnnotation(JsonPath.class);
 
-
-				Map<String, List<String>> fieldNodeMap = buildNodeMap(
-						jsonPath.path());
+				Map<String, Map<String, Object>> fieldNodeMap = new HashMap<>();
+				try {
+					fieldNodeMap = buildNodeMap(jsonPath.path(),
+							field.get(accountResponseBody));
+				} catch (IllegalArgumentException | IllegalAccessException e) {
+					e.printStackTrace();
+				}
 
 				for (String key : fieldNodeMap.keySet()) {
 					if (nodeMap.containsKey(key)) {
-						List<String> list = nodeMap.get(key);
-						list.addAll(fieldNodeMap.get(key));
+						List<Map<String, Object>> list = nodeMap.get(key);
+						list.add(fieldNodeMap.get(key));
 						nodeMap.put(key, list);
 					} else {
-						nodeMap.put(key, fieldNodeMap.get(key));
+						List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+						list.add(fieldNodeMap.get(key));
+						nodeMap.put(key, list);
 					}
 				}
 			}
@@ -60,17 +66,19 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		jsonGenerator.writeEndObject();
 	}
 
-	private void generateJson(String path, List<String> nodeAttributes,
+	private void generateJson(String path, List<Map<String, Object>> list,
 			JsonGenerator jsonGenerator) throws IOException {
 		List<String> splittetPath = Splitter.on(".").splitToList(path);
-
 		for (String node : splittetPath) {
 			jsonGenerator.writeFieldName(node);
 			jsonGenerator.writeStartObject();
 		}
 
-		for (String nodeAttribute : nodeAttributes) {
-			jsonGenerator.writeStringField(nodeAttribute, "blub");
+		for (Map<String, Object> nodeAttribute : list) {
+			for (String key : nodeAttribute.keySet()) {
+				jsonGenerator.writeStringField(key,
+						(String) nodeAttribute.get(key));
+			}
 		}
 
 		for (String node : splittetPath) {
@@ -78,21 +86,21 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		}
 	}
 
-	public Map<String, List<String>> buildNodeMap(String jsonPath) {
-		
-		List<String> splittetPath = Splitter.on(".").splitToList(
-				jsonPath);
-		
-		Map<String, List<String>> pathMap = new HashMap<String, List<String>>();
+	public Map<String, Map<String, Object>> buildNodeMap(String jsonPath,
+			Object object) {
+
+		List<String> splittetPath = Splitter.on(".").splitToList(jsonPath);
+
+		Map<String, Map<String, Object>> pathMap = new HashMap<String, Map<String, Object>>();
 		String lastEntry = splittetPath.get(splittetPath.size() - 1);
 		String path = jsonPath.replace("." + lastEntry, "");
 
 		if (pathMap.containsKey(path)) {
-			List<String> nodeList = pathMap.get(path);
-			nodeList.add(lastEntry);
+			Map<String, Object> nodeList = pathMap.get(path);
+			nodeList.put(lastEntry, object);
 		} else {
-			List<String> nodeList = new ArrayList<String>();
-			nodeList.add(lastEntry);
+			Map<String, Object> nodeList = new HashMap<String, Object>();
+			nodeList.put(lastEntry, object);
 			pathMap.put(path, nodeList);
 		}
 
