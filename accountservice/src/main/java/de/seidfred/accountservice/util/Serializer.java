@@ -40,11 +40,8 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 			if (field.isAnnotationPresent(JsonPath.class)) {
 				JsonPath jsonPath = field.getAnnotation(JsonPath.class);
 
-				List<String> splittetPath = Splitter.on(".").splitToList(
-						jsonPath.path());
-
 				Object fieldValue = field.get(field.getType());
-				tree = buildNodeMap(tree, splittetPath, fieldValue);
+				parsePath(jsonPath, fieldValue);
 
 				}
 			}
