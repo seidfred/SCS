@@ -37,11 +37,9 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 			if (field.isAnnotationPresent(JsonPath.class)) {
 				JsonPath jsonPath = field.getAnnotation(JsonPath.class);
 
-				List<String> splittetPath = Splitter.on(".").splitToList(
-						jsonPath.path());
 
 				Map<String, List<String>> fieldNodeMap = buildNodeMap(
-						jsonPath.path(), splittetPath);
+						jsonPath.path());
 
 				for (String key : fieldNodeMap.keySet()) {
 					if (nodeMap.containsKey(key)) {
@@ -80,8 +78,11 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		}
 	}
 
-	private Map<String, List<String>> buildNodeMap(String jsonPath,
-			List<String> splittetPath) {
+	public Map<String, List<String>> buildNodeMap(String jsonPath) {
+		
+		List<String> splittetPath = Splitter.on(".").splitToList(
+				jsonPath);
+		
 		Map<String, List<String>> pathMap = new HashMap<String, List<String>>();
 		String lastEntry = splittetPath.get(splittetPath.size() - 1);
 		String path = jsonPath.replace("." + lastEntry, "");
