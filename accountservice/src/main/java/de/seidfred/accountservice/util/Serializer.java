@@ -8,11 +8,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -75,25 +78,39 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		jsonGenerator.writeEndObject();
 	}
 
-	private JsonNode generateJson(String path, List<Map<String, Object>> list)
+	public JsonNode generateJson(String path, List<Map<String, Object>> list)
 			throws IOException {
 		List<String> splittetPath = Splitter.on(".").splitToList(path);
+
+		// Create the node factory that gives us nodes.
+		JsonNodeFactory factory = new JsonNodeFactory(false);
+
+		// create a json factory to write the treenode as json. for the example
+		// we just write to console
+		JsonFactory jsonFactory = new JsonFactory();
+		JsonGenerator generator = jsonFactory.createGenerator(System.out);
+		ObjectMapper mapper = new ObjectMapper();
+
+		// the root node - album
+		JsonNode root = factory.objectNode();
+
+		ObjectNode last = (ObjectNode) root;
+
 		for (String node : splittetPath) {
-			jsonGenerator.writeFieldName(node);
-			jsonGenerator.writeStartObject();
+			ObjectNode newJsonNode = factory.objectNode();
+			newJsonNode.putObject(node);
+			((ObjectNode) last).putAll(newJsonNode);
+			last = newJsonNode;
 		}
 
 		for (Map<String, Object> nodeAttribute : list) {
 			for (String key : nodeAttribute.keySet()) {
-				jsonGenerator.writeStringField(key,
-						(String) nodeAttribute.get(key));
+				((ObjectNode) root).put(key, (String) nodeAttribute.get(key));
 			}
 		}
 
-		for (String node : splittetPath) {
-			jsonGenerator.writeEndObject();
-		}
-
+		mapper.writeTree(generator, root);
+		return null;
 	}
 
 	public Map<String, Map<String, Object>> buildNodeMap(String jsonPath,
