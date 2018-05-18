@@ -94,13 +94,17 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		// the root node - album
 		JsonNode root = factory.objectNode();
 
-		ObjectNode last = (ObjectNode) root;
+		ObjectNode last = null;
 
 		for (String node : splittetPath) {
-			ObjectNode newJsonNode = factory.objectNode();
-			newJsonNode.putObject(node);
-			((ObjectNode) last).putAll(newJsonNode);
-			last = newJsonNode;
+			// ObjectNode newJsonNode = factory.objectNode();
+			// newJsonNode.putObject(node);
+			// ((ObjectNode) last).putAll(newJsonNode);
+			// last = newJsonNode;
+			if (last == null) {
+				last = (ObjectNode) root;
+			}
+			last = ((ObjectNode) last).putObject(node);
 		}
 
 		for (Map<String, Object> nodeAttribute : list) {
