@@ -41,46 +41,49 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 			throws IOException {
 		Map<String, List<Map<String, Object>>> nodeMap = new HashMap<String, List<Map<String, Object>>>();
 
-		jsonGenerator.writeStartObject();
+		Map<String, Object> fieldNodeMap = new HashMap<String, Object>();
 
 		for (Field field : accountResponseBody.getClass().getDeclaredFields()) {
 			field.setAccessible(true);
 			if (field.isAnnotationPresent(JsonPath.class)) {
 				JsonPath jsonPath = field.getAnnotation(JsonPath.class);
 
-				Map<String, Map<String, Object>> fieldNodeMap = new HashMap<>();
 				try {
-					fieldNodeMap = buildNodeMap(jsonPath.path(),
-							field.get(accountResponseBody));
+					if (fieldNodeMap.containsKey(jsonPath)) {
+						throw new IllegalArgumentException();
+					} else {
+						fieldNodeMap.put(jsonPath.path(),
+								field.get(accountResponseBody));
+					}
+
 				} catch (IllegalArgumentException | IllegalAccessException e) {
 					e.printStackTrace();
-				}
-
-				for (String key : fieldNodeMap.keySet()) {
-					if (nodeMap.containsKey(key)) {
-						List<Map<String, Object>> list = nodeMap.get(key);
-						list.add(fieldNodeMap.get(key));
-						nodeMap.put(key, list);
-					} else {
-						List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
-						list.add(fieldNodeMap.get(key));
-						nodeMap.put(key, list);
-					}
 				}
 			}
 		}
 
-		for (String path : nodeMap.keySet()) {
-			JsonNode tempJson = generateJson(path, nodeMap.get(path));
+		List<JsonNode> jsonNodes = new ArrayList<JsonNode>();
 
+		for (String path : fieldNodeMap.keySet()) {
+			jsonNodes.add(generateJson(path, fieldNodeMap.get(path)));
 		}
 
-		jsonGenerator.writeEndObject();
+		Iterator<JsonNode> jsonNodeIterator = jsonNodes.iterator();
+
+		JsonNode firstJsonNode = (JsonNode) jsonNodeIterator.next();
+
+		while (jsonNodeIterator.hasNext()) {
+			merge(jsonNodeIterator.next(), firstJsonNode);
+		}
+
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.writeTree(jsonGenerator, firstJsonNode);
 	}
 
-	public JsonNode generateJson(String path, List<Map<String, Object>> list)
-			throws IOException {
-		List<String> splittetPath = Splitter.on(".").splitToList(path);
+	public JsonNode generateJson(String path, Object object) throws IOException {
+		List<String> splittetPath = new ArrayList<String>();
+		splittetPath.addAll(Splitter.on(".").splitToList(path));
+		String lastEntry = splittetPath.remove(splittetPath.size() - 1);
 
 		// Create the node factory that gives us nodes.
 		JsonNodeFactory factory = new JsonNodeFactory(false);
@@ -91,51 +94,25 @@ public class Serializer extends StdSerializer<AccountResponseBody> {
 		JsonGenerator generator = jsonFactory.createGenerator(System.out);
 		ObjectMapper mapper = new ObjectMapper();
 
-		// the root node - album
 		JsonNode root = factory.objectNode();
 
 		ObjectNode last = null;
 
 		for (String node : splittetPath) {
-			// ObjectNode newJsonNode = factory.objectNode();
-			// newJsonNode.putObject(node);
-			// ((ObjectNode) last).putAll(newJsonNode);
-			// last = newJsonNode;
 			if (last == null) {
 				last = (ObjectNode) root;
 			}
-			last = ((ObjectNode) last).putObject(node);
+			last = last.putObject(node);
 		}
 
-		for (Map<String, Object> nodeAttribute : list) {
-			for (String key : nodeAttribute.keySet()) {
-				((ObjectNode) root).put(key, (String) nodeAttribute.get(key));
-			}
+		if (object == null) {
+			last.put(lastEntry, "");
+		} else {
+			last.put(lastEntry, object.toString());
 		}
 
 		mapper.writeTree(generator, root);
-		return null;
-	}
-
-	public Map<String, Map<String, Object>> buildNodeMap(String jsonPath,
-			Object object) {
-
-		List<String> splittetPath = Splitter.on(".").splitToList(jsonPath);
-
-		Map<String, Map<String, Object>> pathMap = new HashMap<String, Map<String, Object>>();
-		String lastEntry = splittetPath.get(splittetPath.size() - 1);
-		String path = jsonPath.replace("." + lastEntry, "");
-
-		if (pathMap.containsKey(path)) {
-			Map<String, Object> nodeList = pathMap.get(path);
-			nodeList.put(lastEntry, object);
-		} else {
-			Map<String, Object> nodeList = new HashMap<String, Object>();
-			nodeList.put(lastEntry, object);
-			pathMap.put(path, nodeList);
-		}
-
-		return pathMap;
+		return root;
 	}
 
 	public static void merge(JsonNode toBeMerged, JsonNode mergedInTo) {
