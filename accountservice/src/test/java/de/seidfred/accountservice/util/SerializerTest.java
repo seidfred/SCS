@@ -26,6 +26,17 @@ public class SerializerTest {
 		underTest.generateJson(path, "Test123");
 	}
 
+    @Test
+    public void test_array() throws IOException {
+        Serializer underTest = new Serializer();
+
+        String path = "cstmrCdtTrfInitn.splmtryData[.envlp.ingprcgData.inggblRefs.inginstrRefs.inginstrId";
+
+        List<Map<String, Object>> temp = new ArrayList<Map<String, Object>>();
+
+        underTest.generateJson(path, "5b311df2-8664-395b-8dad-b4ac771206c7");
+    }
+
 	@Test
 	public void test_merge() throws IOException {
 		Serializer underTest = new Serializer();
