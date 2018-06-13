@@ -19,17 +19,11 @@ public class SerializerTest {
 	public void test() throws IOException {
 		Serializer underTest = new Serializer();
 
-		String path = "ACC.INF";
+		String path = "ACC.INF.ID";
 
 		List<Map<String, Object>> temp = new ArrayList<Map<String, Object>>();
 
-		Map<String, Object> tempMap = new HashMap<String, Object>();
-
-		tempMap.put("ID", "12345");
-
-		temp.add(tempMap);
-
-		underTest.generateJson(path, temp);
+		underTest.generateJson(path, "Test123");
 	}
 
 	@Test
